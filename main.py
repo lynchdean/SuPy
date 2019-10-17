@@ -16,9 +16,9 @@ def main():
         cat_page = requests.get(base_url + tail)
         cat_soup = BeautifulSoup(cat_page.content, features="lxml")
         inner_articles = cat_soup.findAll("div", class_="inner-article")
-        for x in inner_articles:
-            print(x)
-
+        for inner_article in inner_articles:
+            links = inner_article.find("a", class_="name-link")
+            print(links)
 
 
 if __name__ == '__main__':
