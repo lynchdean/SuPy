@@ -1,3 +1,6 @@
+import hashlib
+import time
+
 import requests
 from bs4 import BeautifulSoup
 from selenium import webdriver
@@ -15,6 +18,9 @@ def main():
 
     driver = webdriver.Chrome('./chromedriver', options=chrome_options)
     base_url = "https://www.supremenewyork.com"
+    driver.get(base_url)
+
+    wait_for_page_update(base_url)
 
     page = requests.get(base_url + "/shop/all")
     soup = BeautifulSoup(page.content, features="lxml")
@@ -29,6 +35,26 @@ def main():
 
     navigate_product_page(driver)
     navigate_checkout(driver)
+
+
+def wait_for_page_update(base_url):
+    has_updated = False
+    url = base_url + "/shop/all"
+    page = requests.get(url)
+    reference_hash = hashlib.md5(page.text.encode('utf-8'))
+    reference_digest = reference_hash.hexdigest()
+
+    while not has_updated:
+        new_page = requests.get(url)
+        new_hash = hashlib.md5(new_page.text.encode('utf-8'))
+        if new_hash.hexdigest() == reference_digest:
+            print("No changes.")
+            reference_digest = new_hash.hexdigest()
+        else:
+            print("Live.")
+            has_updated = True
+
+        time.sleep(0.5)
 
 
 def navigate_product_page(driver):
