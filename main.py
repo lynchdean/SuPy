@@ -1,13 +1,12 @@
 import hashlib
 import time
-
 import requests
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.select import Select
 
-target_desc = "Tagless Tee"
+target_desc = "Baltoro"
 target_colour = "Black"
 target_size = "Medium"
 
@@ -67,39 +66,41 @@ def navigate_product_page(driver):
 
 def navigate_checkout(driver):
     driver.get("https://www.supremenewyork.com/checkout")
-    driver.get("https://www.supremenewyork.com/checkout")
+    while driver.current_url != "https://www.supremenewyork.com/checkout":
+        driver.get("https://www.supremenewyork.com/checkout")
+        time.sleep(0.1)
 
     name = driver.find_element_by_xpath("//*[@id=\"order_billing_name\"]")
-    name.send_keys("")
+    name.send_keys("Dean Lynch")
     email = driver.find_element_by_xpath("//*[@id=\"order_email\"]")
-    email.send_keys("")
+    email.send_keys("lynchdean@gmail.com")
     telephone = driver.find_element_by_xpath("//*[@id=\"order_tel\"]")
-    telephone.send_keys("")
+    telephone.send_keys("0873697499")
 
     address_1 = driver.find_element_by_xpath("//*[@id=\"bo\"]")
-    address_1.send_keys("")
+    address_1.send_keys("37 Woodland Park")
     address_2 = driver.find_element_by_xpath("//*[@id=\"oba3\"]")
-    address_2.send_keys("")
+    address_2.send_keys("Rush")
     address_3 = driver.find_element_by_xpath("//*[@id=\"order_billing_address_3\"]")
     address_3.send_keys("")
 
     city = driver.find_element_by_xpath("//*[@id=\"order_billing_city\"]")
-    city.send_keys("")
+    city.send_keys("Co. Dublin")
     postcode = driver.find_element_by_xpath("//*[@id=\"order_billing_zip\"]")
-    postcode.send_keys("")
+    postcode.send_keys("K56 DD76")
     country_dd = Select(driver.find_element_by_xpath("//*[@id=\"order_billing_country\"]"))
-    country_dd.select_by_visible_text("")
+    country_dd.select_by_visible_text("IRELAND")
 
     card_type_dd = Select(driver.find_element_by_xpath("//*[@id=\"credit_card_type\"]"))
-    card_type_dd.select_by_visible_text("")
+    card_type_dd.select_by_visible_text("Visa")
     card_no = driver.find_element_by_xpath("//*[@id=\"cnb\"]")
-    card_no.send_keys("")
+    card_no.send_keys("4539802940807119")
     card_month_dd = Select(driver.find_element_by_xpath("//*[@id=\"credit_card_month\"]"))
-    card_month_dd.select_by_visible_text("")
+    card_month_dd.select_by_visible_text("07")
     card_year_dd = Select(driver.find_element_by_xpath("//*[@id=\"credit_card_year\"]"))
-    card_year_dd.select_by_visible_text("")
+    card_year_dd.select_by_visible_text("2021")
     ccv = driver.find_element_by_xpath("//*[@id=\"vval\"]")
-    ccv.send_keys("")
+    ccv.send_keys("506")
 
     checkbox = driver.find_element_by_xpath("/html/body/div[2]/div[1]/form/div[2]/div[2]/fieldset/p/label/div/ins")
     checkbox.click()
