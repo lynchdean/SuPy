@@ -1,5 +1,6 @@
 import hashlib
 import time
+from datetime import datetime
 
 import requests
 import yaml
@@ -24,8 +25,8 @@ def main():
     base_url = "https://www.supremenewyork.com"
     driver.get(base_url)
 
-    # wait_for_page_update(base_url)
-
+    wait_for_page_update(base_url)
+    start = datetime.now()
     page = requests.get(base_url + "/shop/all")
     soup = BeautifulSoup(page.content, features="lxml")
 
@@ -39,6 +40,9 @@ def main():
     xpaths = autofill_props.get("xpaths")
     navigate_product_page(driver, base_url + target_url_tail, xpaths)
     navigate_checkout(driver, autofill_props)
+
+    end = datetime.now()
+    print("Execution time {0} seconds.".format(str(end - start)))
 
 
 def wait_for_page_update(base_url):
@@ -61,7 +65,6 @@ def wait_for_page_update(base_url):
         time.sleep(0.5)
 
 
-# noinspection SpellCheckingInspection
 def navigate_product_page(driver, url, xpaths):
     force_get_page(driver, url, 0.1)
 
@@ -73,7 +76,6 @@ def navigate_product_page(driver, url, xpaths):
     atc_btn.click()
 
 
-# noinspection SpellCheckingInspection,SpellCheckingInspection,SpellCheckingInspection,SpellCheckingInspection
 def navigate_checkout(driver, properties):
     force_get_page(driver, "https://www.supremenewyork.com/checkout", 0.1)
 
@@ -131,7 +133,6 @@ def get_colour_url_tail(colours):
     return colours[0][1]
 
 
-# noinspection SpellCheckingInspection
 def get_item_dict(base_url, cat_url_tails):
     item_colours = {}
     for tail in cat_url_tails:
