@@ -1,17 +1,22 @@
 import hashlib
 import time
+
 import requests
+import yaml
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.select import Select
 
-target_desc = "Baltoro"
-target_colour = "Black"
-target_size = "Medium"
+target_desc = "tagless"
+target_colour = "Black"  # Case-sensitive
+target_size = "Medium"  # Case-sensitive & must be exact match, e.g.: "Small", "Medium", "Large" or "XLarge"
 
 
 def main():
+    with open("autofill.yaml", 'r') as file:
+        autofill_props = yaml.safe_load(file)
+
     chrome_options = Options()
     chrome_options.add_experimental_option("detach", True)
 
@@ -19,7 +24,7 @@ def main():
     base_url = "https://www.supremenewyork.com"
     driver.get(base_url)
 
-    wait_for_page_update(base_url)
+    # wait_for_page_update(base_url)
 
     page = requests.get(base_url + "/shop/all")
     soup = BeautifulSoup(page.content, features="lxml")
@@ -30,10 +35,10 @@ def main():
 
     item_dict = get_item_dict(base_url, cat_url_tails)
     target_url_tail = get_target_url_tail(item_dict)
-    driver.get(base_url + target_url_tail)
 
-    navigate_product_page(driver)
-    navigate_checkout(driver)
+    xpaths = autofill_props.get("xpaths")
+    navigate_product_page(driver, base_url + target_url_tail, xpaths)
+    navigate_checkout(driver, autofill_props)
 
 
 def wait_for_page_update(base_url):
@@ -56,54 +61,54 @@ def wait_for_page_update(base_url):
         time.sleep(0.5)
 
 
-def navigate_product_page(driver):
-    size_drop_down = Select(driver.find_element_by_xpath("//*[@id=\"size\"]"))
-    size_drop_down.select_by_visible_text(target_size)
+# noinspection SpellCheckingInspection
+def navigate_product_page(driver, url, xpaths):
+    force_get_page(driver, url, 0.1)
 
-    atc_btn = driver.find_element_by_xpath("/html/body/div[2]/div/div[2]/div/form/fieldset[3]/input")
+    if target_size != "":
+        size_drop_down = Select(driver.find_element_by_xpath(xpaths.get("size")))
+        size_drop_down.select_by_visible_text(target_size)
+
+    atc_btn = driver.find_element_by_xpath(xpaths.get("atc"))
     atc_btn.click()
 
 
-def navigate_checkout(driver):
-    driver.get("https://www.supremenewyork.com/checkout")
-    while driver.current_url != "https://www.supremenewyork.com/checkout":
-        driver.get("https://www.supremenewyork.com/checkout")
-        time.sleep(0.1)
+# noinspection SpellCheckingInspection,SpellCheckingInspection,SpellCheckingInspection,SpellCheckingInspection
+def navigate_checkout(driver, properties):
+    force_get_page(driver, "https://www.supremenewyork.com/checkout", 0.1)
 
-    name = driver.find_element_by_xpath("//*[@id=\"order_billing_name\"]")
-    name.send_keys("Dean Lynch")
-    email = driver.find_element_by_xpath("//*[@id=\"order_email\"]")
-    email.send_keys("lynchdean@gmail.com")
-    telephone = driver.find_element_by_xpath("//*[@id=\"order_tel\"]")
-    telephone.send_keys("0873697499")
+    xpaths = properties.get("xpaths")
+    textbox_xpaths = xpaths.get("textbox")
+    dd_xpaths = xpaths.get("dropdown")
+    inputs = properties.get("input")
 
-    address_1 = driver.find_element_by_xpath("//*[@id=\"bo\"]")
-    address_1.send_keys("37 Woodland Park")
-    address_2 = driver.find_element_by_xpath("//*[@id=\"oba3\"]")
-    address_2.send_keys("Rush")
-    address_3 = driver.find_element_by_xpath("//*[@id=\"order_billing_address_3\"]")
-    address_3.send_keys("")
+    for key in textbox_xpaths.keys():
+        xpath = textbox_xpaths[key]
+        fill_input(driver, xpath, inputs.get(key))
 
-    city = driver.find_element_by_xpath("//*[@id=\"order_billing_city\"]")
-    city.send_keys("Co. Dublin")
-    postcode = driver.find_element_by_xpath("//*[@id=\"order_billing_zip\"]")
-    postcode.send_keys("K56 DD76")
-    country_dd = Select(driver.find_element_by_xpath("//*[@id=\"order_billing_country\"]"))
-    country_dd.select_by_visible_text("IRELAND")
+    for key in dd_xpaths.keys():
+        xpath = dd_xpaths[key]
+        set_dropdown(driver, xpath, inputs.get(key))
 
-    card_type_dd = Select(driver.find_element_by_xpath("//*[@id=\"credit_card_type\"]"))
-    card_type_dd.select_by_visible_text("Visa")
-    card_no = driver.find_element_by_xpath("//*[@id=\"cnb\"]")
-    card_no.send_keys("4539802940807119")
-    card_month_dd = Select(driver.find_element_by_xpath("//*[@id=\"credit_card_month\"]"))
-    card_month_dd.select_by_visible_text("07")
-    card_year_dd = Select(driver.find_element_by_xpath("//*[@id=\"credit_card_year\"]"))
-    card_year_dd.select_by_visible_text("2021")
-    ccv = driver.find_element_by_xpath("//*[@id=\"vval\"]")
-    ccv.send_keys("506")
-
-    checkbox = driver.find_element_by_xpath("/html/body/div[2]/div[1]/form/div[2]/div[2]/fieldset/p/label/div/ins")
+    checkbox = driver.find_element_by_xpath(xpaths.get("checkbox"))
     checkbox.click()
+
+
+def fill_input(driver, xpath, text):
+    element = driver.find_element_by_xpath(xpath)
+    driver.execute_script("arguments[0].value = arguments[1];", element, text)
+
+
+def set_dropdown(driver, xpath, option):
+    dd = Select(driver.find_element_by_xpath(xpath))
+    dd.select_by_visible_text(option)
+
+
+def force_get_page(driver, url, interval):
+    driver.get(url)
+    while driver.current_url != url:
+        driver.get(url)
+        time.sleep(interval)
 
 
 def get_target_url_tail(item_dict):
@@ -112,7 +117,7 @@ def get_target_url_tail(item_dict):
         return get_colour_url_tail(item_dict[target_desc])
     else:
         for desc in descriptions:
-            if target_desc in desc:
+            if target_desc.lower() in desc.lower():
                 return get_colour_url_tail(item_dict[desc])
         # If it's not found, just go to homepage
         return ""
@@ -126,6 +131,7 @@ def get_colour_url_tail(colours):
     return colours[0][1]
 
 
+# noinspection SpellCheckingInspection
 def get_item_dict(base_url, cat_url_tails):
     item_colours = {}
     for tail in cat_url_tails:
