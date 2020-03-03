@@ -9,7 +9,9 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.select import Select
 
-target_desc = "tagless"
+from page_monitor import PageMonitor
+
+target_desc = "Tagless Tees"
 target_colour = "Black"  # Case-sensitive
 target_size = "Medium"  # Case-sensitive & must be exact match, e.g.: "Small", "Medium", "Large" or "XLarge"
 
@@ -25,8 +27,10 @@ def main():
     base_url = "https://www.supremenewyork.com"
     driver.get(base_url)
 
+
     wait_for_page_update(base_url)
     start = datetime.now()
+
     page = requests.get(base_url + "/shop/all")
     soup = BeautifulSoup(page.content, features="lxml")
 
@@ -38,6 +42,7 @@ def main():
     target_url_tail = get_target_url_tail(item_dict)
 
     xpaths = autofill_props.get("xpaths")
+    # test_navigate_product_page(base_url + target_url_tail)
     navigate_product_page(driver, base_url + target_url_tail, xpaths)
     navigate_checkout(driver, autofill_props)
 
@@ -45,24 +50,14 @@ def main():
     print("Execution time {0} seconds.".format(str(end - start)))
 
 
-def wait_for_page_update(base_url):
-    has_updated = False
-    url = base_url + "/shop/all"
+def test_navigate_product_page(url):
     page = requests.get(url)
-    reference_hash = hashlib.md5(page.text.encode('utf-8'))
-    reference_digest = reference_hash.hexdigest()
+    print(page.content)
 
-    while not has_updated:
-        new_page = requests.get(url)
-        new_hash = hashlib.md5(new_page.text.encode('utf-8'))
-        if new_hash.hexdigest() == reference_digest:
-            print("No changes.")
-            reference_digest = new_hash.hexdigest()
-        else:
-            print("Live.")
-            has_updated = True
 
-        time.sleep(0.5)
+def wait_for_page_update(base_url):
+    pm = PageMonitor(base_url + "/shop/all", 0.5)
+    # pm.wait_for_update()
 
 
 def navigate_product_page(driver, url, xpaths):
