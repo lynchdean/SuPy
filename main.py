@@ -1,12 +1,9 @@
-import hashlib
 import time
 from datetime import datetime
 
 import requests
 import yaml
 from bs4 import BeautifulSoup
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.select import Select
 
 from page_monitor import PageMonitor
@@ -20,44 +17,74 @@ def main():
     with open("autofill.yaml", 'r') as file:
         autofill_props = yaml.safe_load(file)
 
-    chrome_options = Options()
-    chrome_options.add_experimental_option("detach", True)
-
-    driver = webdriver.Chrome('./chromedriver', options=chrome_options)
     base_url = "https://www.supremenewyork.com"
-    driver.get(base_url)
 
-
-    wait_for_page_update(base_url)
+    #wait_for_page_update(base_url)
     start = datetime.now()
 
-    page = requests.get(base_url + "/shop/all")
-    soup = BeautifulSoup(page.content, features="lxml")
+    target_url_tail = get_target_url(base_url)
 
-    # Get the url tails for each of the categories
-    cat_tags = soup.find("ul", id="nav-categories")
-    cat_url_tails = [link.contents[0].get('href') for link in cat_tags][2:]
-
-    item_dict = get_item_dict(base_url, cat_url_tails)
-    target_url_tail = get_target_url_tail(item_dict)
-
-    xpaths = autofill_props.get("xpaths")
-    # test_navigate_product_page(base_url + target_url_tail)
-    navigate_product_page(driver, base_url + target_url_tail, xpaths)
-    navigate_checkout(driver, autofill_props)
+    run_session(base_url, target_url_tail, target_size, target_colour)
 
     end = datetime.now()
     print("Execution time {0} seconds.".format(str(end - start)))
 
 
-def test_navigate_product_page(url):
-    page = requests.get(url)
-    print(page.content)
+def get_target_url(base_url):
+    page = requests.get(base_url + "/shop/all")
+    soup = BeautifulSoup(page.content, features="lxml")
+    # Get the url tails for each of the categories
+    cat_tags = soup.find("ul", id="nav-categories")
+    cat_url_tails = [link.contents[0].get('href') for link in cat_tags][2:]
+    item_dict = get_item_dict(base_url, cat_url_tails)
+    target_url_tail = get_target_url_tail(item_dict)
+    return target_url_tail
+
+
+def run_session(base_url, target_url_tail, target_size, target_colour):
+    with requests.Session() as session:
+        page = session.get(base_url + target_url_tail)
+        soup = BeautifulSoup(page.text, 'lxml')
+
+        add_to_cart(session, soup, base_url, target_size, target_colour)
+
+        page = session.get(base_url + "/shop/cart")
+        print(page.text)
+
+
+def add_to_cart(session, soup, base_url, size, colour):
+    size_values = get_size_values(soup)
+    style_values = get_style_values(soup)
+
+    atc_url_tail = soup.find(id="cart-addf")["action"]
+    payload = build_payload(size_values[size], style_values[colour])
+    session.post(base_url + atc_url_tail, params=payload)
+
+
+def get_size_values(soup):
+    size_element = soup.find(id='size')
+    return {option.text: option['value'] for option in size_element.find_all('option')}
+
+
+def get_style_values(soup):
+    style_element = soup.find(class_="styles")
+    return {a['data-style-name']: a['data-style-id'] for a in style_element.find_all("a")}
+
+
+def build_payload(style, size, qty=1):
+    payload = {
+        "utf8": " E2 9C 93",
+        "style": style,
+        "size": size,
+        "qty": qty,
+        "commit": "add+to+basket",
+    }
+    return payload
 
 
 def wait_for_page_update(base_url):
     pm = PageMonitor(base_url + "/shop/all", 0.5)
-    # pm.wait_for_update()
+    pm.wait_for_update()
 
 
 def navigate_product_page(driver, url, xpaths):
